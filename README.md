@@ -36,6 +36,21 @@ GhostMQ is a high-throughput, in-memory queue designed for server environments. 
 
 GhostMQ now supports at-least-once message delivery with a visibility timeout. If a popped message is not acknowledged within the queue's visibility timeout, it is returned to the queue.
 
+## Docker
+
+Build and run the service with Docker:
+
+```bash
+docker build -t ghostmq .
+docker run -p 8080:8080 ghostmq
+```
+
+Or start the service with Docker Compose using a single command:
+
+```bash
+docker compose up --build
+```
+
 ## Contributing
 
 Information on how to contribute to the GhostMQ project will be added here.
