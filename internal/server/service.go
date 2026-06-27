@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"regexp"
 	"time"
 
 	"ghostmq/internal/observability"
@@ -14,6 +16,7 @@ import (
 
 var (
 	ErrQueueNotFound = errors.New("queue not found")
+	queueNamePattern = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
 )
 
 // QueueService contains the business logic for queue operations.
@@ -57,19 +60,32 @@ func (s *QueueService) Metrics() observability.Snapshot {
 	return s.queueManager.MetricsSnapshot()
 }
 
-// CreateQueue validates and creates a queue.
-func (s *QueueService) CreateQueue(input CreateQueueInput) (queue.QueueInfo, error) {
+func validateCreateQueueInput(input CreateQueueInput) error {
 	if input.Name == "" {
-		return queue.QueueInfo{}, errors.New("queue name is required")
+		return errors.New("queue name is required")
+	}
+	if !queueNamePattern.MatchString(input.Name) {
+		return fmt.Errorf("queue name can only contain letters, numbers, '.', '_' and '-'")
 	}
 	if input.MaxSize <= 0 {
-		return queue.QueueInfo{}, errors.New("maxSize must be greater than zero")
+		return errors.New("maxSize must be greater than zero")
 	}
 	if input.BackpressureMode == "" {
 		input.BackpressureMode = "block"
 	}
 	if input.BackpressureMode != "block" && input.BackpressureMode != "drop" && input.BackpressureMode != "error" {
-		return queue.QueueInfo{}, errors.New("backpressureMode must be block, drop, or error")
+		return errors.New("backpressureMode must be block, drop, or error")
+	}
+	if input.VisibilityTimeoutSeconds < 0 {
+		return errors.New("visibilityTimeoutSeconds must be greater than or equal to zero")
+	}
+	return nil
+}
+
+// CreateQueue validates and creates a queue.
+func (s *QueueService) CreateQueue(input CreateQueueInput) (queue.QueueInfo, error) {
+	if err := validateCreateQueueInput(input); err != nil {
+		return queue.QueueInfo{}, err
 	}
 
 	visibilityTimeout := 30 * time.Second
@@ -128,4 +144,15 @@ func (s *QueueService) AckMessage(queueName, id string) error {
 		return errors.New("id is required")
 	}
 	return q.Ack(id)
+}
+
+// ValidateQueueName ensures a queue name conforms to the public API contract.
+func ValidateQueueName(name string) error {
+	if name == "" {
+		return errors.New("queue name is required")
+	}
+	if !queueNamePattern.MatchString(name) {
+		return fmt.Errorf("queue name can only contain letters, numbers, '.', '_' and '-'")
+	}
+	return nil
 }

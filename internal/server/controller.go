@@ -74,6 +74,10 @@ func (c *Controller) queueHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	queueName := parts[1]
+	if err := ValidateQueueName(queueName); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	if len(parts) == 2 {
 		switch r.Method {
@@ -124,7 +128,7 @@ func (c *Controller) createQueue(w http.ResponseWriter, r *http.Request) {
 		VisibilityTimeoutSeconds: req.VisibilityTimeoutSeconds,
 	})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusConflict)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -198,7 +202,7 @@ func (c *Controller) ackHandler(w http.ResponseWriter, r *http.Request, queueNam
 			http.NotFound(w, r)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
