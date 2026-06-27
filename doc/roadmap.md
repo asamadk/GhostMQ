@@ -1,16 +1,26 @@
 # GhostMQ Roadmap
 
-This document outlines the planned features and development stages for GhostMQ.
+This document outlines the planned direction for GhostMQ as a fast, high-throughput, in-memory messaging queue.
 
 ## Current Focus
 
-*   **V1 Core Implementation**: Implementing the core engine, backpressure router, at-least-once reliability, HTTP API, and configuration.
+*   **V1 Core Implementation**: Deliver a lightweight in-memory queue engine with configurable backpressure, at-least-once delivery semantics, an HTTP API, and YAML-based configuration.
+*   **Performance First**: Optimize for low-latency enqueue/dequeue operations and efficient memory usage.
+*   **Operational Simplicity**: Keep deployment simple with a single-node containerized runtime.
+
+## Near-Term Goals
+
+*   Improve API ergonomics and observability
+*   Add more queue-level metrics and health reporting
+*   Strengthen reliability behavior around retries and acknowledgements
+*   Expand examples and integration documentation
+*   Evaluate lower-latency transport options, including gRPC, to reduce request overhead
 
 ## Future Plans
 
-*   Persistence options (e.g., disk-backed queues)
-*   Clustering and distributed queues
+*   Introduce gRPC-based transport for higher-throughput client/server communication
+*   Provide official SDKs for Node.js, Python, Java, and Go
+*   Clustering and distributed queue topologies
 *   Advanced monitoring and metrics
-*   Client libraries for various languages
 *   Authentication and Authorization
 *   Web UI for management
