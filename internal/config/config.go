@@ -8,9 +8,10 @@ import (
 
 // QueueConfig represents the configuration for a single queue.
 type QueueConfig struct {
-	Name             string `yaml:"name"`
-	MaxSize          int    `yaml:"maxSize"`
-	BackpressureMode string `yaml:"backpressureMode"`
+	Name                     string `yaml:"name"`
+	MaxSize                  int    `yaml:"maxSize"`
+	BackpressureMode         string `yaml:"backpressureMode"`
+	VisibilityTimeoutSeconds int    `yaml:"visibilityTimeoutSeconds,omitempty"`
 }
 
 // Config represents the overall application configuration.
