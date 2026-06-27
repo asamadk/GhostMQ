@@ -2,7 +2,7 @@
 
 GhostMQ is a high-throughput, in-memory queue designed for server environments. It provides a lightweight yet powerful messaging solution, focusing on performance and reliability for microservices and distributed systems. GhostMQ is an open-source project.
 
-## Features (Planned)
+## Features
 
 *   **Core Engine & Memory Structures**: Thread-safe foundation with `Message`, `Queue`, and `QueueManager` structs.
 *   **Backpressure Router**: Configurable backpressure modes ("block", "drop", "error") to manage queue overflow.
@@ -12,13 +12,11 @@ GhostMQ is a high-throughput, in-memory queue designed for server environments. 
 
 ## Getting Started
 
-1. Install Go 1.24 or later.
-2. Configure queues in `ghostmq.yaml`.
+1. Configure queues in `ghostmq.yaml`.
 3. Run the server:
-
    ```bash
-   go run main.go
-   ```
+    docker compose up --build
+    ```
 
 ### REST API
 
@@ -35,21 +33,6 @@ GhostMQ is a high-throughput, in-memory queue designed for server environments. 
 ### Message Delivery
 
 GhostMQ now supports at-least-once message delivery with a visibility timeout. If a popped message is not acknowledged within the queue's visibility timeout, it is returned to the queue.
-
-## Docker
-
-Build and run the service with Docker:
-
-```bash
-docker build -t ghostmq .
-docker run -p 8080:8080 ghostmq
-```
-
-Or start the service with Docker Compose using a single command:
-
-```bash
-docker compose up --build
-```
 
 ## Contributing
 
