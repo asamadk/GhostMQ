@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"ghostmq/internal/config"
+	"ghostmq/internal/grpcserver"
 	"ghostmq/internal/queue"
 	"ghostmq/internal/server"
 )
@@ -50,6 +51,12 @@ func main() {
 	httpServer.Start(":8080")
 	log.Println("HTTP server started on :8080")
 
+	grpcServer := grpcserver.NewServer(queueManager)
+	if err := grpcServer.Start(":9090"); err != nil {
+		log.Fatalf("failed to start gRPC server: %v", err)
+	}
+	log.Println("gRPC server started on :9090")
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -59,7 +66,10 @@ func main() {
 	defer cancel()
 
 	if err := httpServer.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		log.Printf("HTTP server shutdown error: %v", err)
+	}
+	if err := grpcServer.Shutdown(ctx); err != nil {
+		log.Printf("gRPC server shutdown error: %v", err)
 	}
 
 	queueManager.Close()

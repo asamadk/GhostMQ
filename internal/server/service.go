@@ -25,6 +25,11 @@ type QueueService struct {
 }
 
 func newQueueService(queueManager *queue.QueueManager) *QueueService {
+	return NewQueueService(queueManager)
+}
+
+// NewQueueService creates a queue service using the provided queue manager.
+func NewQueueService(queueManager *queue.QueueManager) *QueueService {
 	return &QueueService{queueManager: queueManager}
 }
 

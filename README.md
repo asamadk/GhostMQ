@@ -8,6 +8,7 @@ GhostMQ is a high-throughput, in-memory queue designed for server environments. 
 *   **Backpressure Router**: Configurable backpressure modes ("block", "drop", "error") to manage queue overflow.
 *   **At-Least-Once Consumer Reliability**: Ensures message delivery even if consumers crash, using in-flight tracking and visibility timeouts.
 *   **HTTP REST API Layer**: Exposes core functionality via a clean `net/http` interface for easy integration.
+*   **gRPC API Layer**: Supports the same queue operations over gRPC for low-overhead, strongly-typed clients.
 *   **Configuration & Lifecycle Infrastructure**: YAML-based configuration for queue topology and graceful shutdown handling.
 
 ## Getting Started
@@ -30,6 +31,10 @@ GhostMQ is a high-throughput, in-memory queue designed for server environments. 
 * `GET /queues/{queue}` - pop a message from the queue
 * `POST /queues/{queue}/ack` - acknowledge a message
   * body: `{"id":"<message-id>"}`
+
+### gRPC API
+
+The service also exposes the same queue operations over gRPC on port 9090.
 
 ### Message Delivery
 

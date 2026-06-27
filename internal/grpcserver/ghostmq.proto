@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package ghostmq.v1;
+
+option go_package = "ghostmq/internal/grpcserver;grpcserver";
+
+service GhostMQService {
+  rpc CreateQueue(CreateQueueRequest) returns (QueueInfo);
+  rpc PushMessage(PushMessageRequest) returns (PushMessageResponse);
+  rpc PopMessage(PopMessageRequest) returns (Message);
+  rpc AckMessage(AckMessageRequest) returns (AckMessageResponse);
+  rpc ListQueues(ListQueuesRequest) returns (ListQueuesResponse);
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc Metrics(MetricsRequest) returns (MetricsResponse);
+}
+
+message CreateQueueRequest {
+  string name = 1;
+  int32 max_size = 2;
+  string backpressure_mode = 3;
+  int32 visibility_timeout_seconds = 4;
+}
+
+message QueueInfo {
+  string name = 1;
+  int32 max_size = 2;
+  string backpressure_mode = 3;
+  int32 visibility_timeout_seconds = 4;
+  int32 pending = 5;
+  int32 in_flight = 6;
+}
+
+message PushMessageRequest {
+  string queue_name = 1;
+  bytes payload = 2;
+}
+
+message PushMessageResponse {
+  string message_id = 1;
+}
+
+message PopMessageRequest {
+  string queue_name = 1;
+}
+
+message Message {
+  string id = 1;
+  bytes payload = 2;
+  int64 timestamp_unix_nano = 3;
+}
+
+message AckMessageRequest {
+  string queue_name = 1;
+  string id = 2;
+}
+
+message AckMessageResponse {
+  bool acknowledged = 1;
+}
+
+message ListQueuesRequest {}
+
+message ListQueuesResponse {
+  repeated QueueInfo queues = 1;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;
+  int32 queue_count = 2;
+}
+
+message MetricsRequest {}
+
+message MetricsResponse {
+  int64 enqueue_count = 1;
+  int64 dequeue_count = 2;
+  int64 ack_count = 3;
+  int64 reject_count = 4;
+  map<string, QueueMetrics> queues = 5;
+}
+
+message QueueMetrics {
+  int64 enqueue_count = 1;
+  int64 dequeue_count = 2;
+  int64 ack_count = 3;
+  int64 reject_count = 4;
+}
