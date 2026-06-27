@@ -36,12 +36,23 @@ type ackRequest struct {
 
 func (c *Controller) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/health", c.healthHandler)
+	mux.HandleFunc("/metrics", c.metricsHandler)
 	mux.HandleFunc("/queues", c.queuesHandler)
 	mux.HandleFunc("/queues/", c.queueHandler)
 }
 
 func (c *Controller) healthHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "OK")
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(c.service.Health()); err != nil {
+		http.Error(w, "Failed to encode health response", http.StatusInternalServerError)
+	}
+}
+
+func (c *Controller) metricsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(c.service.Metrics()); err != nil {
+		http.Error(w, "Failed to encode metrics", http.StatusInternalServerError)
+	}
 }
 
 func (c *Controller) queuesHandler(w http.ResponseWriter, r *http.Request) {

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"ghostmq/internal/observability"
 )
 
 type inFlightItem struct {
@@ -41,6 +43,7 @@ type Queue struct {
 	stopCh            chan struct{}
 	closeOnce         sync.Once
 	mu                sync.RWMutex
+	metricsRecorder   *observability.Recorder
 }
 
 // NewQueue creates a new queue and starts visibility timeout monitoring.
@@ -60,6 +63,34 @@ func NewQueue(name string, maxSize int, backpressureMode string, visibilityTimeo
 	}
 	q.startVisibilityMonitor()
 	return q
+}
+
+func (q *Queue) SetMetricsRecorder(recorder *observability.Recorder) {
+	q.metricsRecorder = recorder
+}
+
+func (q *Queue) recordEnqueue() {
+	if q.metricsRecorder != nil {
+		q.metricsRecorder.RecordEnqueue(q.Name)
+	}
+}
+
+func (q *Queue) recordDequeue() {
+	if q.metricsRecorder != nil {
+		q.metricsRecorder.RecordDequeue(q.Name)
+	}
+}
+
+func (q *Queue) recordAck() {
+	if q.metricsRecorder != nil {
+		q.metricsRecorder.RecordAck(q.Name)
+	}
+}
+
+func (q *Queue) recordReject() {
+	if q.metricsRecorder != nil {
+		q.metricsRecorder.RecordReject(q.Name)
+	}
 }
 
 func (q *Queue) startVisibilityMonitor() {
@@ -123,23 +154,29 @@ func (q *Queue) Push(msg Message) (err error) {
 	switch q.BackpressureMode {
 	case "block":
 		q.ch <- msg
+		q.recordEnqueue()
 		return nil
 	case "drop":
 		select {
 		case q.ch <- msg:
+			q.recordEnqueue()
 			return nil
 		default:
+			q.recordReject()
 			return errors.New("queue is full, message dropped")
 		}
 	case "error":
 		select {
 		case q.ch <- msg:
+			q.recordEnqueue()
 			return nil
 		default:
+			q.recordReject()
 			return errors.New("queue is full, message rejected")
 		}
 	default:
 		q.ch <- msg
+		q.recordEnqueue()
 		return nil
 	}
 }
@@ -154,6 +191,7 @@ func (q *Queue) Pop(ctx context.Context) (*Message, error) {
 			return nil, errors.New("queue closed")
 		}
 		q.registerInFlight(msg)
+		q.recordDequeue()
 		return &msg, nil
 	}
 }
@@ -177,6 +215,7 @@ func (q *Queue) Ack(messageID string) error {
 	}
 
 	delete(q.inFlight, messageID)
+	q.recordAck()
 	return nil
 }
 

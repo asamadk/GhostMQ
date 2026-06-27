@@ -21,6 +21,7 @@ GhostMQ is a high-throughput, in-memory queue designed for server environments. 
 ### REST API
 
 * `GET /health` - health check
+* `GET /metrics` - queue operation metrics
 * `GET /queues` - list configured queues
 * `POST /queues` - create a new queue
   * body: `{"name":"myqueue","maxSize":1000,"backpressureMode":"block"}`

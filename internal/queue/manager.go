@@ -4,18 +4,30 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"ghostmq/internal/observability"
 )
 
 // QueueManager manages a collection of queues.
 type QueueManager struct {
-	queues map[string]*Queue
-	mu     sync.RWMutex // Protects the queues map
+	queues          map[string]*Queue
+	mu              sync.RWMutex // Protects the queues map
+	metricsRecorder *observability.Recorder
 }
 
 // NewQueueManager creates and returns a new QueueManager instance.
 func NewQueueManager() *QueueManager {
+	return NewQueueManagerWithRecorder(observability.NewRecorder())
+}
+
+// NewQueueManagerWithRecorder creates a queue manager with an injected metrics recorder.
+func NewQueueManagerWithRecorder(recorder *observability.Recorder) *QueueManager {
+	if recorder == nil {
+		recorder = observability.NewRecorder()
+	}
 	return &QueueManager{
-		queues: make(map[string]*Queue),
+		queues:          make(map[string]*Queue),
+		metricsRecorder: recorder,
 	}
 }
 
@@ -30,6 +42,7 @@ func (qm *QueueManager) CreateQueue(name string, maxSize int, backpressureMode s
 	}
 
 	q := NewQueue(name, maxSize, backpressureMode, visibilityTimeout)
+	q.SetMetricsRecorder(qm.metricsRecorder)
 	qm.queues[name] = q
 	return q, nil
 }
@@ -52,6 +65,16 @@ func (qm *QueueManager) ListQueues() []QueueInfo {
 		infos = append(infos, q.Info())
 	}
 	return infos
+}
+
+// MetricsSnapshot returns the current in-memory metrics for all queues.
+func (qm *QueueManager) MetricsSnapshot() observability.Snapshot {
+	qm.mu.RLock()
+	defer qm.mu.RUnlock()
+	if qm.metricsRecorder == nil {
+		return observability.Snapshot{Queues: make(map[string]observability.QueueMetrics)}
+	}
+	return qm.metricsRecorder.Snapshot()
 }
 
 // Close shuts down all managed queues.

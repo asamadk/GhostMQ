@@ -6,6 +6,7 @@ import (
 	"errors"
 	"time"
 
+	"ghostmq/internal/observability"
 	"ghostmq/internal/queue"
 
 	"github.com/google/uuid"
@@ -32,9 +33,28 @@ type CreateQueueInput struct {
 	VisibilityTimeoutSeconds int
 }
 
+// Health returns a lightweight health summary for the service.
+type HealthResponse struct {
+	Status     string `json:"status"`
+	QueueCount int    `json:"queueCount"`
+}
+
 // ListQueues returns the current queue status snapshot.
 func (s *QueueService) ListQueues() []queue.QueueInfo {
 	return s.queueManager.ListQueues()
+}
+
+// Health returns a health summary for the service.
+func (s *QueueService) Health() HealthResponse {
+	return HealthResponse{
+		Status:     "ok",
+		QueueCount: len(s.queueManager.ListQueues()),
+	}
+}
+
+// Metrics returns the current metrics snapshot.
+func (s *QueueService) Metrics() observability.Snapshot {
+	return s.queueManager.MetricsSnapshot()
 }
 
 // CreateQueue validates and creates a queue.
