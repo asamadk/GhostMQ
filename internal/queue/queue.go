@@ -1,10 +1,16 @@
 package queue
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"time"
 )
+
+type inFlightItem struct {
+	msg       Message
+	expiresAt time.Time
+}
 
 // Message represents a message in the queue.
 type Message struct {
@@ -13,19 +19,106 @@ type Message struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// QueueInfo provides status metadata for a queue.
+type QueueInfo struct {
+	Name                     string `json:"name"`
+	MaxSize                  int    `json:"maxSize"`
+	BackpressureMode         string `json:"backpressureMode"`
+	VisibilityTimeoutSeconds int    `json:"visibilityTimeoutSeconds"`
+	Pending                  int    `json:"pending"`
+	InFlight                 int    `json:"inFlight"`
+}
+
 // Queue represents a message queue with a buffered channel and backpressure configuration.
 type Queue struct {
-	Name             string
-	MaxSize          int
-	BackpressureMode string
-	ch               chan Message
-	mu               sync.RWMutex // For protecting access to queue properties if needed, though channel operations are safe.
+	Name              string
+	MaxSize           int
+	BackpressureMode  string
+	VisibilityTimeout time.Duration
+	ch                chan Message
+	inFlight          map[string]inFlightItem
+	inFlightMu        sync.Mutex
+	stopCh            chan struct{}
+	closeOnce         sync.Once
+	mu                sync.RWMutex
+}
+
+// NewQueue creates a new queue and starts visibility timeout monitoring.
+func NewQueue(name string, maxSize int, backpressureMode string, visibilityTimeout time.Duration) *Queue {
+	if visibilityTimeout <= 0 {
+		visibilityTimeout = 30 * time.Second
+	}
+
+	q := &Queue{
+		Name:              name,
+		MaxSize:           maxSize,
+		BackpressureMode:  backpressureMode,
+		VisibilityTimeout: visibilityTimeout,
+		ch:                make(chan Message, maxSize),
+		inFlight:          make(map[string]inFlightItem),
+		stopCh:            make(chan struct{}),
+	}
+	q.startVisibilityMonitor()
+	return q
+}
+
+func (q *Queue) startVisibilityMonitor() {
+	ticker := time.NewTicker(500 * time.Millisecond)
+	go func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				q.requeueExpired()
+			case <-q.stopCh:
+				return
+			}
+		}
+	}()
+}
+
+func (q *Queue) requeueExpired() {
+	now := time.Now()
+
+	q.inFlightMu.Lock()
+	expired := make([]Message, 0)
+	for id, item := range q.inFlight {
+		if now.After(item.expiresAt) {
+			delete(q.inFlight, id)
+			expired = append(expired, item.msg)
+		}
+	}
+	q.inFlightMu.Unlock()
+
+	for _, msg := range expired {
+		q.requeue(msg)
+	}
+}
+
+func (q *Queue) requeue(msg Message) {
+	defer func() {
+		if r := recover(); r != nil {
+			// Ignore send on closed channel
+		}
+	}()
+
+	select {
+	case <-q.stopCh:
+		return
+	case q.ch <- msg:
+		return
+	}
 }
 
 // Push adds a message to the queue, applying the configured backpressure mode if the queue is full.
-func (q *Queue) Push(msg Message) error {
+func (q *Queue) Push(msg Message) (err error) {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.New("queue closed")
+		}
+	}()
 
 	switch q.BackpressureMode {
 	case "block":
@@ -46,22 +139,67 @@ func (q *Queue) Push(msg Message) error {
 			return errors.New("queue is full, message rejected")
 		}
 	default:
-		// Default to block if mode is unknown
 		q.ch <- msg
 		return nil
 	}
 }
 
-// Pop retrieves a message from the queue. It blocks until a message is available.
-func (q *Queue) Pop() (*Message, bool) {
-	msg, ok := <-q.ch
-	if !ok {
-		return nil, false
+// Pop retrieves a message from the queue and marks it in-flight.
+func (q *Queue) Pop(ctx context.Context) (*Message, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case msg, ok := <-q.ch:
+		if !ok {
+			return nil, errors.New("queue closed")
+		}
+		q.registerInFlight(msg)
+		return &msg, nil
 	}
-	return &msg, true
 }
 
-// Close closes the queue's channel.
+func (q *Queue) registerInFlight(msg Message) {
+	q.inFlightMu.Lock()
+	q.inFlight[msg.ID] = inFlightItem{
+		msg:       msg,
+		expiresAt: time.Now().Add(q.VisibilityTimeout),
+	}
+	q.inFlightMu.Unlock()
+}
+
+// Ack acknowledges that a message was processed successfully.
+func (q *Queue) Ack(messageID string) error {
+	q.inFlightMu.Lock()
+	defer q.inFlightMu.Unlock()
+
+	if _, exists := q.inFlight[messageID]; !exists {
+		return errors.New("message not found or already acknowledged")
+	}
+
+	delete(q.inFlight, messageID)
+	return nil
+}
+
+// Info returns status metadata for this queue.
+func (q *Queue) Info() QueueInfo {
+	q.inFlightMu.Lock()
+	inFlightCount := len(q.inFlight)
+	q.inFlightMu.Unlock()
+
+	return QueueInfo{
+		Name:                     q.Name,
+		MaxSize:                  q.MaxSize,
+		BackpressureMode:         q.BackpressureMode,
+		VisibilityTimeoutSeconds: int(q.VisibilityTimeout.Seconds()),
+		Pending:                  len(q.ch),
+		InFlight:                 inFlightCount,
+	}
+}
+
+// Close shuts down the queue and its visibility monitoring.
 func (q *Queue) Close() {
-	close(q.ch)
+	q.closeOnce.Do(func() {
+		close(q.stopCh)
+		close(q.ch)
+	})
 }
