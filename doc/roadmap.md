@@ -4,7 +4,7 @@ This document outlines the planned direction for GhostMQ as a fast, high-through
 
 ## Current Focus
 
-*   **V1 Core Implementation**: Deliver a lightweight in-memory queue engine with configurable backpressure, at-least-once delivery semantics, an HTTP API, and YAML-based configuration.
+*   **V1 Core Implementation**: Deliver a lightweight in-memory queue engine with configurable backpressure, at-least-once delivery semantics, an HTTP API, gRPC transport, and YAML-based configuration.
 *   **Performance First**: Optimize for low-latency enqueue/dequeue operations and efficient memory usage.
 *   **Operational Simplicity**: Keep deployment simple with a single-node containerized runtime.
 *   **Observability**: Expose lightweight health and queue metrics for operational visibility.
@@ -15,8 +15,8 @@ This document outlines the planned direction for GhostMQ as a fast, high-through
 
 *   Add richer queue-level health reporting and operational metrics
 *   Strengthen reliability behavior around retries and acknowledgements
-*   Evaluate lower-latency transport options, including gRPC, to reduce request overhead
-*   Add starter SDK examples for Node.js, Python, Java, and Go
+*   Build starter SDK examples for Node.js, Python, Java, and Go
+*   Enhance API governance for both REST and gRPC transports
 
 ## Future Plans
 

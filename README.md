@@ -34,7 +34,28 @@ GhostMQ is a high-throughput, in-memory queue designed for server environments. 
 
 ### gRPC API
 
-The service also exposes the same queue operations over gRPC on port 9090.
+The service also exposes the same queue operations over gRPC on port 9090 using the `GhostMQService` service definition.
+
+Use the `.proto` file at `internal/grpcserver/ghostmq.proto` to generate clients.
+
+Example `grpcurl` usage:
+
+```bash
+# List service methods
+grpcurl -plaintext localhost:9090 list ghostmq.v1.GhostMQService
+
+# Create a queue
+grpcurl -plaintext -d '{"name":"agent-jobs","maxSize":1000,"backpressureMode":"block"}' localhost:9090 ghostmq.v1.GhostMQService.CreateQueue
+
+# Push a message
+grpcurl -plaintext -d '{"queueName":"agent-jobs","payload":"SGVsbG8gd29ybGQ="}' localhost:9090 ghostmq.v1.GhostMQService.PushMessage
+
+# Pop a message
+grpcurl -plaintext -d '{"queueName":"agent-jobs"}' localhost:9090 ghostmq.v1.GhostMQService.PopMessage
+
+# Acknowledge a message
+grpcurl -plaintext -d '{"queueName":"agent-jobs","id":"<message-id>"}' localhost:9090 ghostmq.v1.GhostMQService.AckMessage
+```
 
 ### Message Delivery
 
