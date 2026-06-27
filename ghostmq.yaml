@@ -1,0 +1,12 @@
+# GhostMQ Configuration Example
+
+queues:
+  - name: default
+    maxSize: 1000
+    backpressureMode: block
+  - name: high_priority
+    maxSize: 500
+    backpressureMode: error
+  - name: low_priority
+    maxSize: 2000
+    backpressureMode: drop
