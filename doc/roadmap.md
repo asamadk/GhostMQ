@@ -8,14 +8,15 @@ This document outlines the planned direction for GhostMQ as a fast, high-through
 *   **Performance First**: Optimize for low-latency enqueue/dequeue operations and efficient memory usage.
 *   **Operational Simplicity**: Keep deployment simple with a single-node containerized runtime.
 *   **Observability**: Expose lightweight health and queue metrics for operational visibility.
+*   **API Hardening**: Improve request validation, error semantics, and developer ergonomics.
+*   **Documentation**: Provide architecture guidance, integration examples, and clear onboarding paths.
 
 ## Near-Term Goals
 
-*   Improve API ergonomics and request validation
 *   Add richer queue-level health reporting and operational metrics
 *   Strengthen reliability behavior around retries and acknowledgements
-*   Expand examples and integration documentation
 *   Evaluate lower-latency transport options, including gRPC, to reduce request overhead
+*   Add starter SDK examples for Node.js, Python, Java, and Go
 
 ## Future Plans
 

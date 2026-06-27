@@ -57,6 +57,42 @@ GhostMQ is a strong fit when you need a lightweight, low-latency, in-memory queu
 
 GhostMQ is not meant to replace Kafka for high-volume event streaming or RabbitMQ for feature-rich broker routing. Instead, it is best positioned as a fast, pragmatic queue for simple in-process or single-node service communication.
 
+## Examples and Integration
+
+### Create a queue
+
+```bash
+curl -X POST http://localhost:8080/queues \
+  -H "Content-Type: application/json" \
+  -d '{"name":"agent-jobs","maxSize":1000,"backpressureMode":"block"}'
+```
+
+### Publish a message
+
+```bash
+curl -X POST http://localhost:8080/queues/agent-jobs \
+  -H "Content-Type: application/json" \
+  -d '{"task":"summarize","payload":"hello"}'
+```
+
+### Consume a message
+
+```bash
+curl http://localhost:8080/queues/agent-jobs
+```
+
+### Acknowledge a message
+
+```bash
+curl -X POST http://localhost:8080/queues/agent-jobs/ack \
+  -H "Content-Type: application/json" \
+  -d '{"id":"<message-id>"}'
+```
+
+### Architecture Overview
+
+For a deeper look at the system structure and request flow, see [doc/architecture.md](doc/architecture.md).
+
 ## Contributing
 
 Information on how to contribute to the GhostMQ project will be added here.
