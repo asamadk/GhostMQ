@@ -9,9 +9,42 @@ import (
 	"ghostmq/internal/observability"
 )
 
+var payloadPool = sync.Pool{
+	New: func() any {
+		return make([]byte, 0, 1024)
+	},
+}
+
 type inFlightItem struct {
 	msg       Message
 	expiresAt time.Time
+}
+
+// QueueBackend represents a queue implementation with push/pop/ack semantics.
+type QueueBackend interface {
+	Push(Message) error
+	Pop(context.Context) (*Message, error)
+	Ack(string) error
+	Info() QueueInfo
+	Close()
+	SetMetricsRecorder(*observability.Recorder)
+}
+
+// AcquirePayload returns a preallocated byte slice of the requested length.
+func AcquirePayload(length int) []byte {
+	buf := payloadPool.Get().([]byte)
+	if cap(buf) < length {
+		buf = make([]byte, length)
+	}
+	return buf[:length]
+}
+
+// ReleasePayload returns a payload buffer to the pool for reuse.
+func ReleasePayload(payload []byte) {
+	if len(payload) == 0 {
+		return
+	}
+	payloadPool.Put(payload[:0])
 }
 
 // Message represents a message in the queue.
@@ -27,6 +60,7 @@ type QueueInfo struct {
 	MaxSize                  int    `json:"maxSize"`
 	BackpressureMode         string `json:"backpressureMode"`
 	VisibilityTimeoutSeconds int    `json:"visibilityTimeoutSeconds"`
+	PartitionCount           int    `json:"partitionCount"`
 	Pending                  int    `json:"pending"`
 	InFlight                 int    `json:"inFlight"`
 }
@@ -208,13 +242,15 @@ func (q *Queue) registerInFlight(msg Message) {
 // Ack acknowledges that a message was processed successfully.
 func (q *Queue) Ack(messageID string) error {
 	q.inFlightMu.Lock()
-	defer q.inFlightMu.Unlock()
-
-	if _, exists := q.inFlight[messageID]; !exists {
+	item, exists := q.inFlight[messageID]
+	if !exists {
+		q.inFlightMu.Unlock()
 		return errors.New("message not found or already acknowledged")
 	}
-
 	delete(q.inFlight, messageID)
+	q.inFlightMu.Unlock()
+
+	ReleasePayload(item.msg.Payload)
 	q.recordAck()
 	return nil
 }
@@ -230,6 +266,7 @@ func (q *Queue) Info() QueueInfo {
 		MaxSize:                  q.MaxSize,
 		BackpressureMode:         q.BackpressureMode,
 		VisibilityTimeoutSeconds: int(q.VisibilityTimeout.Seconds()),
+		PartitionCount:           1,
 		Pending:                  len(q.ch),
 		InFlight:                 inFlightCount,
 	}

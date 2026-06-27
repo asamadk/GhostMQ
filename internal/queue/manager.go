@@ -10,7 +10,7 @@ import (
 
 // QueueManager manages a collection of queues.
 type QueueManager struct {
-	queues          map[string]*Queue
+	queues          map[string]QueueBackend
 	mu              sync.RWMutex // Protects the queues map
 	metricsRecorder *observability.Recorder
 }
@@ -26,14 +26,14 @@ func NewQueueManagerWithRecorder(recorder *observability.Recorder) *QueueManager
 		recorder = observability.NewRecorder()
 	}
 	return &QueueManager{
-		queues:          make(map[string]*Queue),
+		queues:          make(map[string]QueueBackend),
 		metricsRecorder: recorder,
 	}
 }
 
 // CreateQueue creates a new queue with the given name, max size, backpressure mode, and visibility timeout.
 // It returns an error if a queue with the same name already exists.
-func (qm *QueueManager) CreateQueue(name string, maxSize int, backpressureMode string, visibilityTimeout time.Duration) (*Queue, error) {
+func (qm *QueueManager) CreateQueue(name string, maxSize int, backpressureMode string, visibilityTimeout time.Duration, partitionCount int) (QueueBackend, error) {
 	qm.mu.Lock()
 	defer qm.mu.Unlock()
 
@@ -41,15 +41,20 @@ func (qm *QueueManager) CreateQueue(name string, maxSize int, backpressureMode s
 		return nil, fmt.Errorf("queue '%s' already exists", name)
 	}
 
-	q := NewQueue(name, maxSize, backpressureMode, visibilityTimeout)
-	q.SetMetricsRecorder(qm.metricsRecorder)
+	var q QueueBackend
+	if partitionCount > 1 {
+		q = NewPartitionedQueue(name, maxSize, backpressureMode, visibilityTimeout, partitionCount, qm.metricsRecorder)
+	} else {
+		q = NewQueue(name, maxSize, backpressureMode, visibilityTimeout)
+		q.SetMetricsRecorder(qm.metricsRecorder)
+	}
 	qm.queues[name] = q
 	return q, nil
 }
 
 // GetQueue retrieves a queue by its name.
 // It returns nil if the queue does not exist.
-func (qm *QueueManager) GetQueue(name string) *Queue {
+func (qm *QueueManager) GetQueue(name string) QueueBackend {
 	qm.mu.RLock()
 	defer qm.mu.RUnlock()
 	return qm.queues[name]

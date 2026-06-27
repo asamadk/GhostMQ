@@ -19,6 +19,7 @@ message CreateQueueRequest {
   int32 max_size = 2;
   string backpressure_mode = 3;
   int32 visibility_timeout_seconds = 4;
+  int32 partition_count = 5;
 }
 
 message QueueInfo {

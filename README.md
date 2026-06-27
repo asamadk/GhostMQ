@@ -93,6 +93,14 @@ curl -X POST http://localhost:8080/queues \
   -d '{"name":"agent-jobs","maxSize":1000,"backpressureMode":"block"}'
 ```
 
+### Create a multi-partition queue
+
+```bash
+curl -X POST http://localhost:8080/queues \
+  -H "Content-Type: application/json" \
+  -d '{"name":"agent-jobs-sharded","maxSize":2000,"backpressureMode":"block","partitionCount":4}'
+```
+
 ### Publish a message
 
 ```bash

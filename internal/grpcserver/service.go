@@ -30,6 +30,7 @@ func (s *Service) CreateQueue(ctx context.Context, req *CreateQueueRequest) (*Qu
 		MaxSize:                  int(req.MaxSize),
 		BackpressureMode:         req.BackpressureMode,
 		VisibilityTimeoutSeconds: int(req.VisibilityTimeoutSeconds),
+		PartitionCount:           int(req.PartitionCount),
 	})
 	if err != nil {
 		return nil, err

@@ -28,6 +28,7 @@ type createQueueRequest struct {
 	MaxSize                  int    `json:"maxSize"`
 	BackpressureMode         string `json:"backpressureMode"`
 	VisibilityTimeoutSeconds int    `json:"visibilityTimeoutSeconds,omitempty"`
+	PartitionCount           int    `json:"partitionCount,omitempty"`
 }
 
 type ackRequest struct {
@@ -126,6 +127,7 @@ func (c *Controller) createQueue(w http.ResponseWriter, r *http.Request) {
 		MaxSize:                  req.MaxSize,
 		BackpressureMode:         req.BackpressureMode,
 		VisibilityTimeoutSeconds: req.VisibilityTimeoutSeconds,
+		PartitionCount:           req.PartitionCount,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

@@ -12,6 +12,7 @@ type QueueConfig struct {
 	MaxSize                  int    `yaml:"maxSize"`
 	BackpressureMode         string `yaml:"backpressureMode"`
 	VisibilityTimeoutSeconds int    `yaml:"visibilityTimeoutSeconds,omitempty"`
+	PartitionCount           int    `yaml:"partitionCount,omitempty"`
 }
 
 // Config represents the overall application configuration.

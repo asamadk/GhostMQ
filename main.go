@@ -34,12 +34,15 @@ func main() {
 		if qc.BackpressureMode == "" {
 			qc.BackpressureMode = "block"
 		}
+		if qc.PartitionCount <= 0 {
+			qc.PartitionCount = 1
+		}
 		visibilityTimeout := 30 * time.Second
 		if qc.VisibilityTimeoutSeconds > 0 {
 			visibilityTimeout = time.Duration(qc.VisibilityTimeoutSeconds) * time.Second
 		}
 
-		_, err := queueManager.CreateQueue(qc.Name, qc.MaxSize, qc.BackpressureMode, visibilityTimeout)
+		_, err := queueManager.CreateQueue(qc.Name, qc.MaxSize, qc.BackpressureMode, visibilityTimeout, qc.PartitionCount)
 		if err != nil {
 			log.Printf("failed to create queue '%s': %v", qc.Name, err)
 		} else {

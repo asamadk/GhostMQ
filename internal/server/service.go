@@ -39,6 +39,7 @@ type CreateQueueInput struct {
 	MaxSize                  int
 	BackpressureMode         string
 	VisibilityTimeoutSeconds int
+	PartitionCount           int
 }
 
 // Health returns a lightweight health summary for the service.
@@ -84,6 +85,9 @@ func validateCreateQueueInput(input CreateQueueInput) error {
 	if input.VisibilityTimeoutSeconds < 0 {
 		return errors.New("visibilityTimeoutSeconds must be greater than or equal to zero")
 	}
+	if input.PartitionCount < 1 {
+		input.PartitionCount = 1
+	}
 	return nil
 }
 
@@ -98,7 +102,7 @@ func (s *QueueService) CreateQueue(input CreateQueueInput) (queue.QueueInfo, err
 		visibilityTimeout = time.Duration(input.VisibilityTimeoutSeconds) * time.Second
 	}
 
-	q, err := s.queueManager.CreateQueue(input.Name, input.MaxSize, input.BackpressureMode, visibilityTimeout)
+	q, err := s.queueManager.CreateQueue(input.Name, input.MaxSize, input.BackpressureMode, visibilityTimeout, input.PartitionCount)
 	if err != nil {
 		return queue.QueueInfo{}, err
 	}
